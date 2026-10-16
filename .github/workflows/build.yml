@@ -1,0 +1,36 @@
+name: Build PickAds
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Get source
+        uses: actions/checkout@v4
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.419'
+      - name: Build Windows executable
+        run: dotnet build PickAds.csproj -c Release -o dist
+      - name: Calculate checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash dist/PickAds.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  PickAds.exe" | Set-Content -Encoding ascii dist/PickAds.exe.sha256
+      - name: Upload download
+        uses: actions/upload-artifact@v4
+        with:
+          name: PickAds-Windows
+          if-no-files-found: error
+          path: |
+            dist/PickAds.exe
+            dist/PickAds.exe.sha256
+            SECURITY-REVIEW.md
