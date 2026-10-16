@@ -598,6 +598,36 @@ namespace PickAds
 
     }
 
+    // User-controlled startup. Windows launches normally; Main requests UAC
+    // permission each time, rather than registering an elevated scheduled task.
+    static class Startup
+    {
+        const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        const string ValueName = "PickAdsReviewed";
+
+        static string Command
+        {
+            get { return "\"" + Application.ExecutablePath + "\" --tray"; }
+        }
+
+        public static bool IsEnabled()
+        {
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RunKey))
+                return key != null && string.Equals(key.GetValue(ValueName) as string,
+                    Command, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static void SetEnabled(bool enabled)
+        {
+            using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(RunKey))
+            {
+                if (key == null) throw new IOException("Could not open Windows startup settings.");
+                if (enabled) key.SetValue(ValueName, Command, Microsoft.Win32.RegistryValueKind.String);
+                else key.DeleteValue(ValueName, false);
+            }
+        }
+    }
+
     // ------------------------------------------------------------------
     // Icons (drawn in code so the app is a single file)
     // ------------------------------------------------------------------
@@ -1165,7 +1195,7 @@ namespace PickAds
         readonly Badge badge;
         readonly Label statusLabel, detailLabel, listLabel, hintLabel, lastCheckLabel;
         readonly PillButton toggleButton, scanButton, clearDnsButton, addButton, removeButton;
-        readonly ToggleSwitch autoSwitch, notifySwitch;
+        readonly ToggleSwitch autoSwitch, startupSwitch, notifySwitch;
         readonly SiteList list;
         bool updating;
 
@@ -1212,7 +1242,9 @@ namespace PickAds
 
             autoSwitch = MakeSettingRow(settings, 0, "Auto-block new ads", "Checks for new ads in the background");
             autoSwitch.Toggled += (s, e) => { if (!updating) app.SetAutoDetect(autoSwitch.On); };
-            notifySwitch = MakeSettingRow(settings, 1, "Notifications", "Tell me when new ads get blocked");
+            startupSwitch = MakeSettingRow(settings, 1, "Start with Windows", "Asks for admin permission when you sign in");
+            startupSwitch.Toggled += (s, e) => { if (!updating) SetStartup(startupSwitch.On); };
+            notifySwitch = MakeSettingRow(settings, 2, "Notifications", "Tell me when new ads get blocked");
             notifySwitch.Toggled += (s, e) => { if (!updating) Store.Notify = notifySwitch.On; };
 
             // ---- Blocked sites card ----
@@ -1334,6 +1366,11 @@ namespace PickAds
 
                 autoSwitch.On = Store.AutoDetect;
                 notifySwitch.On = Store.Notify;
+                if (checkStartup)
+                {
+                    try { startupSwitch.On = Startup.IsEnabled(); }
+                    catch (Exception ex) { startupSwitch.On = false; Log.Write("Startup read failed: " + ex.Message); }
+                }
 
                 listLabel.Text = "Blocked sites  (" + domains.Count + ")";
                 var selected = new HashSet<string>(list.SelectedItems.Cast<string>());
@@ -1369,6 +1406,25 @@ namespace PickAds
                 int i = list.Items.IndexOf(d);
                 if (i >= 0) { list.SetSelected(i, true); list.TopIndex = i; }
             }
+        }
+
+        void SetStartup(bool on)
+        {
+            if (on && MessageBox.Show(this,
+                "Start PickAds when you sign in to Windows?\n\n" +
+                "Windows will still ask you for administrator permission each time. " +
+                "You can choose No to leave PickAds closed.\n\n" +
+                "Keep this EXE in a permanent folder. Moving or deleting it breaks startup. " +
+                "This setting does not remove an older PickAds scheduled task.",
+                Program.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+            {
+                RefreshAll(true);
+                return;
+            }
+            try { Startup.SetEnabled(on); }
+            catch (Exception ex) { app.ShowError(ex); }
+            RefreshAll(true);
         }
 
         void AddSite()

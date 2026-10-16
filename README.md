@@ -24,7 +24,7 @@ After these files are pushed to GitHub, open **Actions**, select the latest succ
 
 - **One click** to turn ad blocking on or off
 - **Finds new ads automatically** in the background and blocks them
-- **Runs in the tray** after a manual launch; no scheduled startup task
+- **Start with Windows** is optional and off by default. Windows still asks for administrator permission at sign-in; no elevated scheduled task is created.
 - **Unblock anything** with one click if a launcher stops working
 - Light and dark mode, matching your Windows setting
 - One small `.exe` (about 80 KB). Nothing to install. Uses the .NET Framework already built into Windows 10 and 11.
@@ -83,3 +83,7 @@ Blocking ads means launchers and creators earn less from you. On Modrinth, part 
 ## License
 
 [MIT](LICENSE)
+
+## Optional startup
+
+Move PickAds.exe to a permanent folder, open it, and turn on **Start with Windows**. Confirm the prompt. PickAds starts in the tray when your Windows user signs in and asks for administrator permission. Choosing No leaves it closed. Turn the switch off to remove its startup entry. Windows Settings > Apps > Startup can also disable it. Moving the EXE requires turning the switch off before moving, then on at its new location. This uses the current user registry Run key (PickAdsReviewed); it does not create, migrate, or refresh any scheduled task. Existing legacy tasks must be inspected separately. When using a different administrator account to approve UAC, settings belong to that administrator account.

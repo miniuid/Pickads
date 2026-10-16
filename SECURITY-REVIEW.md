@@ -24,3 +24,7 @@ Static checks confirm scheduled-task code is absent, all supplied process-launch
 
 ## Windows follow-up
 Keep the old EXE quarantined. Inspect and remove the old PickAds scheduled task in Task Scheduler, and run Defender Offline/full scans. Build this source with build.bat on a Windows development machine, scan the newly generated EXE with current Defender definitions, then test with a disposable Windows VM snapshot. Verify no new scheduled task appears, hosts remains unchanged before opting in, monitoring defaults off with fresh settings, blocking on/off preserves unrelated hosts lines, the backup exists, and read-only/malformed hosts are refused. Investigate any new detection rather than excluding the app.
+
+## Optional startup update
+
+The Start with Windows switch now explicitly opts into a current-user Run entry named PickAdsReviewed. It defaults absent/off, can be removed with the switch, and is never migrated or refreshed automatically. The executable manifest is asInvoker; Main still asks for UAC approval before starting the privileged UI, including at sign-in. No highest-privilege task or UAC bypass is used. Earlier statements about removing scheduled tasks remain accurate; startup now uses this separate mechanism. This update compiled successfully, but login, UAC, registry permissions and startup behavior still require Windows testing. Existing saved binaries/checksums above describe the earlier build, not this update.
