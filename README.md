@@ -89,6 +89,14 @@ All product names, logos, and trademarks belong to their respective owners.
 
 Blocking ads may reduce revenue for launcher developers and mod creators. Consider supporting projects you use through their official support options.
 
+## Credits
+
+PickAds was created by miniuid.
+
+If you review, test, showcase, or fork PickAds, please credit miniuid and link to this repository. Credit is appreciated but is not an additional license requirement.
+
+Copies or substantial portions of the software must retain the copyright notice and MIT License.
+
 ## License
 
 Copyright (c) 2026 miniuid.
