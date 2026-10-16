@@ -83,7 +83,7 @@ One scanner flagged a tested build on VirusTotal, and that detection remains unr
 
 ## Not affiliated
 
-PickAds is an independent community project. It is **not affiliated with, endorsed by, sponsored by, or officially connected to Dawn Client, Lunar Client, Modrinth App, Mojang, Microsoft, or any other Minecraft launcher or client**.
+PickAds is an independent project. It is **not affiliated with, endorsed by, sponsored by, or officially connected to Dawn Client, Lunar Client, Modrinth App, Mojang, Microsoft, or any other Minecraft launcher or client**.
 
 All product names, logos, and trademarks belong to their respective owners.
 
