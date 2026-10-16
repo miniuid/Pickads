@@ -24,7 +24,7 @@ After these files are pushed to GitHub, open **Actions**, select the latest succ
 
 - **One click** to turn ad blocking on or off
 - **Finds new ads automatically** in the background and blocks them
-- **Start with Windows** is optional and off by default. Windows still asks for administrator permission at sign-in; no elevated scheduled task is created.
+- **Start with Windows** is optional and off by default. After approval it installs a protected startup copy and an elevated logon task, so an administrator account is not prompted at each sign-in.
 - **Unblock anything** with one click if a launcher stops working
 - Light and dark mode, matching your Windows setting
 - One small `.exe` (about 80 KB). Nothing to install. Uses the .NET Framework already built into Windows 10 and 11.
@@ -86,4 +86,6 @@ Blocking ads means launchers and creators earn less from you. On Modrinth, part 
 
 ## Optional startup
 
-Move PickAds.exe to a permanent folder, open it, and turn on **Start with Windows**. Confirm the prompt. PickAds starts in the tray when your Windows user signs in and asks for administrator permission. Choosing No leaves it closed. Turn the switch off to remove its startup entry. Windows Settings > Apps > Startup can also disable it. Moving the EXE requires turning the switch off before moving, then on at its new location. This uses the current user registry Run key (PickAdsReviewed); it does not create, migrate, or refresh any scheduled task. Existing legacy tasks must be inspected separately. When using a different administrator account to approve UAC, settings belong to that administrator account.
+Open PickAds, approve its administrator prompt, and turn on **Start with Windows**. Confirm the explanation. The app copies itself into a new protected `Program Files\PickAds-Startup-<random>` folder and registers a scheduled task for the current Windows identity, starting 15 seconds after sign-in with highest available privileges. This is intended for Windows administrator accounts; it does not grant administrator rights to standard accounts. Approving UAC as another account sets up startup for that account instead.
+
+Turn the switch off to remove the task and the older PickAdsReviewed Run entry. Protected installed files remain. To update the startup copy: turn startup off, exit PickAds, open the new EXE, and turn startup on again. Moving the downloaded EXE does not move the installed startup copy. Existing legacy tasks named PickAds or MC Ad Blocker are not changed. Antivirus protection remains enabled; do not bypass detections. Login behavior has not been tested on Windows in this environment.

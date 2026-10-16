@@ -1,3 +1,11 @@
+# Current startup behavior (latest update)
+
+At the user's explicit request, startup now uses a highest-available-privilege, interactive-token logon task for the current SID. It is off until the user confirms setup. Setup runs only through the existing administrator-approved application. The task runs a fresh copy under Program Files in a directory with a protected ACL: Administrators and SYSTEM have full control; Users have read/execute only. It never points at a Downloads or user-writable executable. Windows schtasks is resolved by absolute system path; task XML is created in the protected installation directory and deleted afterward. No credentials are stored and no Windows protection is disabled. Disabling removes the task and prior Run entry; copies remain installed. Updates require explicit off/on setup from the new binary. This feature requires an administrator account; it does not elevate a standard account. This update compiled with zero errors/warnings. Task creation/deletion, ACL enforcement, and sign-in behavior require Windows testing and are not verified here.
+
+The historical review below describes earlier revisions; its statements that scheduled startup was removed and later used only the Run key are superseded by this section. Prior hashes describe prior binaries.
+
+---
+
 # PickAds source security review
 
 ## Scope and conclusion

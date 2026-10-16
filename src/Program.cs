@@ -598,33 +598,97 @@ namespace PickAds
 
     }
 
-    // User-controlled startup. Windows launches normally; Main requests UAC
-    // permission each time, rather than registering an elevated scheduled task.
+    // Explicitly approved elevated logon task; executable stored with a protected ACL.
     static class Startup
     {
         const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         const string ValueName = "PickAdsReviewed";
+        static string Sid { get { return WindowsIdentity.GetCurrent().User.Value; } }
+        static string TaskName { get { return "PickAds-Reviewed-" + Sid; } }
 
-        static string Command
+        static int RunTaskTool(string args, out string output)
         {
-            get { return "\"" + Application.ExecutablePath + "\" --tray"; }
+            var psi = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "schtasks.exe"), args);
+            psi.UseShellExecute = false;
+            psi.CreateNoWindow = true;
+            psi.RedirectStandardOutput = true;
+            psi.RedirectStandardError = true;
+            using (var process = Process.Start(psi))
+            {
+                var stdout = process.StandardOutput.ReadToEndAsync();
+                var stderr = process.StandardError.ReadToEndAsync();
+                if (!process.WaitForExit(20000))
+                {
+                    process.Kill();
+                    throw new IOException("Windows Task Scheduler did not respond in time. Check Task Scheduler before retrying.");
+                }
+                output = stdout.Result + stderr.Result;
+                return process.ExitCode;
+            }
         }
 
         public static bool IsEnabled()
         {
-            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RunKey))
-                return key != null && string.Equals(key.GetValue(ValueName) as string,
-                    Command, StringComparison.OrdinalIgnoreCase);
+            string output;
+            return RunTaskTool("/Query /TN \"" + TaskName + "\"", out output) == 0;
+        }
+
+        static void RemoveOldRunEntry()
+        {
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RunKey, true))
+                if (key != null) key.DeleteValue(ValueName, false);
         }
 
         public static void SetEnabled(bool enabled)
         {
-            using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(RunKey))
+            string output;
+            if (!enabled)
             {
-                if (key == null) throw new IOException("Could not open Windows startup settings.");
-                if (enabled) key.SetValue(ValueName, Command, Microsoft.Win32.RegistryValueKind.String);
-                else key.DeleteValue(ValueName, false);
+                if (IsEnabled() && RunTaskTool("/Delete /TN \"" + TaskName + "\" /F", out output) != 0)
+                    throw new IOException("Could not remove startup task: " + output);
+                RemoveOldRunEntry();
+                return;
             }
+            // Use a fresh directory, never an existing user-controlled installation.
+            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            if (string.IsNullOrEmpty(programFiles) ||
+                (File.GetAttributes(programFiles) & FileAttributes.ReparsePoint) != 0)
+                throw new IOException("A normal protected Program Files folder is required.");
+            string folder = Path.Combine(programFiles, "PickAds-Startup-" + Guid.NewGuid().ToString("N"));
+            var acl = new System.Security.AccessControl.DirectorySecurity();
+            acl.SetAccessRuleProtection(true, false);
+            foreach (var role in new[] { WellKnownSidType.BuiltinAdministratorsSid, WellKnownSidType.LocalSystemSid, WellKnownSidType.BuiltinUsersSid })
+            {
+                var rights = role == WellKnownSidType.BuiltinUsersSid
+                    ? System.Security.AccessControl.FileSystemRights.ReadAndExecute
+                    : System.Security.AccessControl.FileSystemRights.FullControl;
+                acl.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
+                    new SecurityIdentifier(role, null), rights,
+                    System.Security.AccessControl.InheritanceFlags.ContainerInherit | System.Security.AccessControl.InheritanceFlags.ObjectInherit,
+                    System.Security.AccessControl.PropagationFlags.None, System.Security.AccessControl.AccessControlType.Allow));
+            }
+            Directory.CreateDirectory(folder, acl);
+            string executable = Path.Combine(folder, "PickAds.exe");
+            File.Copy(Application.ExecutablePath, executable, false);
+            string xmlPath = Path.Combine(folder, "startup.xml");
+            string xml = "<?xml version=\"1.0\" encoding=\"UTF-16\"?>" +
+                "<Task version=\"1.2\" xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit/task\">" +
+                "<RegistrationInfo><Description>Opt-in PickAds startup with administrator privileges.</Description></RegistrationInfo>" +
+                "<Triggers><LogonTrigger><Enabled>true</Enabled><UserId>" + Sid + "</UserId><Delay>PT15S</Delay></LogonTrigger></Triggers>" +
+                "<Principals><Principal id=\"User\"><UserId>" + Sid + "</UserId><LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel></Principal></Principals>" +
+                "<Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>" +
+                "<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><ExecutionTimeLimit>PT0S</ExecutionTimeLimit></Settings>" +
+                "<Actions Context=\"User\"><Exec><Command>" + SecurityElement.Escape(executable) +
+                "</Command><Arguments>--tray</Arguments><WorkingDirectory>" + SecurityElement.Escape(folder) + "</WorkingDirectory></Exec></Actions></Task>";
+            File.WriteAllText(xmlPath, xml, Encoding.Unicode);
+            try
+            {
+                if (RunTaskTool("/Create /TN \"" + TaskName + "\" /XML \"" + xmlPath + "\" /F", out output) != 0)
+                    throw new IOException("Could not enable startup: " + output);
+                RemoveOldRunEntry();
+            }
+            finally { File.Delete(xmlPath); }
+            // Retain the protected EXE. Disabling removes the task, not installed files.
         }
     }
 
@@ -1242,7 +1306,7 @@ namespace PickAds
 
             autoSwitch = MakeSettingRow(settings, 0, "Auto-block new ads", "Checks for new ads in the background");
             autoSwitch.Toggled += (s, e) => { if (!updating) app.SetAutoDetect(autoSwitch.On); };
-            startupSwitch = MakeSettingRow(settings, 1, "Start with Windows", "Asks for admin permission when you sign in");
+            startupSwitch = MakeSettingRow(settings, 1, "Start with Windows", "Starts in the tray without asking each time");
             startupSwitch.Toggled += (s, e) => { if (!updating) SetStartup(startupSwitch.On); };
             notifySwitch = MakeSettingRow(settings, 2, "Notifications", "Tell me when new ads get blocked");
             notifySwitch.Toggled += (s, e) => { if (!updating) Store.Notify = notifySwitch.On; };
@@ -1412,10 +1476,11 @@ namespace PickAds
         {
             if (on && MessageBox.Show(this,
                 "Start PickAds when you sign in to Windows?\n\n" +
-                "Windows will still ask you for administrator permission each time. " +
-                "You can choose No to leave PickAds closed.\n\n" +
-                "Keep this EXE in a permanent folder. Moving or deleting it breaks startup. " +
-                "This setting does not remove an older PickAds scheduled task.",
+                "This installs a protected copy in Program Files and creates a Windows scheduled task. " +
+                "That copy runs with administrator rights at sign-in without another permission prompt.\n\n" +
+                "Turn this switch off to remove the task. Installed files remain. " +
+                "To update the startup copy later, turn this off, open the new EXE, then turn it on again. " +
+                "Older PickAds tasks are not changed.",
                 Program.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes)
             {
