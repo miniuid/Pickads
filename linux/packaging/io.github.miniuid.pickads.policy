@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN" "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>miniuid</vendor>
+  <vendor_url>https://github.com/miniuid/Pickads</vendor_url>
+  <action id="io.github.miniuid.pickads.manage">
+    <description>Manage PickAds domain blocks</description>
+    <message>Authentication is required to let PickAds manage its hosts-file section and inspect the DNS cache for this session.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/pickads-helper</annotate>
+  </action>
+</policyconfig>

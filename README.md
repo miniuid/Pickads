@@ -1,5 +1,11 @@
 # Pickads
 
+## Linux version (experimental)
+
+A Qt6 port matching the Windows interface is available in [linux/](linux/README.md),
+targeting Fedora 44 KDE Plasma. See its instructions and [validation limits](linux/VALIDATION.md)
+before testing. The Windows instructions below still apply to the Windows release.
+
 
 PickAds is a free, open-source Windows app by **miniuid** that helps block ads in Minecraft launchers such as Dawn Client, Lunar Client, and Modrinth App.
 

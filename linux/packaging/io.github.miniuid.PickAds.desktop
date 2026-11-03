@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=PickAds
+Comment=Manage ad-domain blocking for Minecraft launchers
+Exec=pickads
+Icon=pickads
+Terminal=false
+Categories=Network;
+Keywords=Minecraft;ads;hosts;
+StartupNotify=false

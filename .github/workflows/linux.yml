@@ -1,0 +1,27 @@
+name: Build PickAds for Fedora
+
+on:
+  push:
+    paths: ['linux/**', 'LICENSE', '.github/workflows/linux.yml']
+  pull_request:
+    paths: ['linux/**', 'LICENSE', '.github/workflows/linux.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fedora:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - name: Install Fedora build dependencies
+        run: dnf -y install git rpm-build python3-pyside6 desktop-file-utils qt6-qtwayland
+      - uses: actions/checkout@v5
+      - name: Test and build Fedora RPM
+        run: sh linux/build-rpm.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PickAds-Fedora-44-Experimental
+          if-no-files-found: error
+          path: linux/dist/*
