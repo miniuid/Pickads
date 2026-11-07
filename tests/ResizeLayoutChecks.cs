@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
+using System.IO;
 
 static class ResizeLayoutChecks
 {
@@ -26,6 +27,21 @@ static class ResizeLayoutChecks
         foreach (Control child in control.Controls) Layout(child);
     }
 
+    static void SettleLayout(Control control)
+    {
+        // Native Windows can defer layout while handles and DPI are initialized.
+        for (int pass = 0; pass < 3; pass++)
+        {
+            Layout(control);
+            Application.DoEvents();
+        }
+    }
+
+    static string Bounds(Control control)
+    {
+        return control.Name + "=" + control.Bounds;
+    }
+
     [STAThread]
     static int Main(string[] args)
     {
@@ -33,13 +49,15 @@ static class ResizeLayoutChecks
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            var assembly = Assembly.LoadFrom(args[0]);
+            Console.WriteLine("Runtime: " + Environment.Version + "; 64-bit process: " + Environment.Is64BitProcess);
+            Console.WriteLine("Screen: " + SystemInformation.VirtualScreen);
+            var assembly = Assembly.LoadFrom(Path.GetFullPath(args[0]));
             var type = assembly.GetType("PickAds.MainForm", true);
             using (var form = (Form)Activator.CreateInstance(type, new object[] { null }))
             {
                 form.Show();
                 Application.DoEvents();
-                Layout(form);
+                SettleLayout(form);
                 var original = form.ClientSize;
                 var hero = Find(form, "StatusCard");
                 var settings = Find(form, "SettingsCard");
@@ -56,6 +74,8 @@ static class ResizeLayoutChecks
                     .Where(c => c.GetType().Name == "ToggleSwitch")
                     .Select(c => settings.ClientSize.Width - c.Right).ToArray();
 
+                Console.WriteLine("Initial client=" + original + "; window=" + form.Size + "; minimum=" + form.MinimumSize);
+
                 Check(form.MaximizeBox, "Maximize must be enabled");
                 Check(form.FormBorderStyle == FormBorderStyle.Sizable, "Window border must be resizable");
                 Check(form.MinimumSize.Width >= form.Width && form.MinimumSize.Height >= form.Height,
@@ -66,7 +86,8 @@ static class ResizeLayoutChecks
                 {
                     form.ClientSize = size;
                     Application.DoEvents();
-                    Layout(form);
+                    SettleLayout(form);
+                    Console.WriteLine("Client=" + form.ClientSize + "; " + Bounds(hero) + "; " + Bounds(sites) + "; " + Bounds(list) + "; " + Bounds(actions));
                     int dx = form.ClientSize.Width - original.Width;
                     int dy = form.ClientSize.Height - original.Height;
                     Check(hero.Width == originalCardWidth + dx, "Status card width must follow the window");

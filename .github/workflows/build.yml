@@ -19,15 +19,26 @@ jobs:
         with:
           dotnet-version: '8.0.419'
       - name: Build Windows executable
-        run: dotnet build PickAds.csproj -c Release -o dist
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force test-results | Out-Null
+          dotnet build PickAds.csproj -c Release -o dist 2>&1 | Tee-Object test-results/app-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check resizable Windows layout
         shell: pwsh
         run: |
-          $compiler = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
-          & $compiler /nologo /target:exe /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /out:dist/ResizeLayoutChecks.exe tests/ResizeLayoutChecks.cs
+          New-Item -ItemType Directory -Force test-results | Out-Null
+          dotnet build tests/ResizeLayoutChecks.csproj -c Release -o layout-checks 2>&1 | Tee-Object test-results/layout-build.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & dist/ResizeLayoutChecks.exe dist/PickAds.exe
+          & .\layout-checks\ResizeLayoutChecks.exe "$PWD\dist\PickAds.exe" 2>&1 | Tee-Object test-results/layout-test.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Save build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PickAds-Build-Diagnostics
+          if-no-files-found: warn
+          path: test-results/
       - name: Calculate checksum
         shell: pwsh
         run: |

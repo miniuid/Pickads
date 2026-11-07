@@ -48,3 +48,15 @@ form without TrayApp and never executes hosts or startup actions. The committed
 Windows build workflow also compiles and runs the checks using Microsoft's
 Framework compiler. That workflow's outcome has not been confirmed here; native
 Windows DPI/multi-monitor behavior still needs desktop testing.
+
+### Build workflow follow-up
+
+The GitHub run for the first resizable revision failed, but its detailed error
+was not accessible from this environment. Replaced the legacy Framework compiler
+invocation for the checker with a dedicated SDK-style net48 project, using the
+same DPI manifest and bitness as the app. Added layout settling and diagnostic
+output without removing assertions. Both Microsoft SDK builds now succeed
+locally with zero warnings/errors, and the SDK-built pair passes all 75 assertions
+under Mono/Xvfb. App/test logs are uploaded on a failed run. This is a build
+workflow correction; the original remote failure cause and the new native
+Windows run outcome remain unconfirmed until the GitHub logs can be inspected.
