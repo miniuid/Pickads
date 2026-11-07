@@ -1273,8 +1273,9 @@ namespace PickAds
             AutoScaleMode = AutoScaleMode.Dpi;
             Text = Program.AppName;
             ClientSize = new Size(400, 616);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
+            FormBorderStyle = FormBorderStyle.Sizable;
+            MaximizeBox = true;
+            MinimumSize = SizeFromClientSize(ClientSize);
             StartPosition = FormStartPosition.CenterScreen;
             Font = Theme.Font(9.5f, false);
             BackColor = Theme.Bg;
@@ -1283,7 +1284,9 @@ namespace PickAds
 
             // ---- Status card ----
             var hero = new Card();
+            hero.Name = "StatusCard";
             hero.SetBounds(16, 16, 368, 164);
+            hero.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             Controls.Add(hero);
 
             badge = new Badge();
@@ -1292,16 +1295,20 @@ namespace PickAds
 
             statusLabel = MakeLabel(hero, 100, 24, 252, 30, Theme.Font(15f, true), Theme.Text);
             detailLabel = MakeLabel(hero, 101, 56, 251, 24, Theme.Font(9.5f, false), Theme.Sub);
+            statusLabel.Anchor = detailLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             toggleButton = new PillButton();
             toggleButton.Font = Theme.Font(10.5f, true);
             toggleButton.SetBounds(20, 100, 328, 44);
+            toggleButton.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             toggleButton.Click += (s, e) => app.SetBlocking(!Store.IsBlockingOn());
             hero.Controls.Add(toggleButton);
 
             // ---- Settings card ----
             var settings = new Card();
+            settings.Name = "SettingsCard";
             settings.SetBounds(16, 192, 368, 164);
+            settings.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             Controls.Add(settings);
 
             autoSwitch = MakeSettingRow(settings, 0, "Auto-block new ads", "Checks for new ads in the background");
@@ -1313,34 +1320,55 @@ namespace PickAds
 
             // ---- Blocked sites card ----
             var sites = new Card();
+            sites.Name = "SitesCard";
             sites.SetBounds(16, 368, 368, 212);
+            sites.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             Controls.Add(sites);
 
             listLabel = MakeLabel(sites, 20, 14, 160, 22, Theme.Font(10.5f, true), Theme.Text);
             hintLabel = MakeLabel(sites, 168, 16, 180, 20, Theme.Font(8.5f, false), Theme.Sub);
             hintLabel.TextAlign = ContentAlignment.MiddleRight;
             hintLabel.Text = "Select a site to unblock it";
+            hintLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
             list = new SiteList();
+            list.Name = "BlockedSitesList";
             list.SetBounds(12, 42, 344, 116);
+            list.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             sites.Controls.Add(list);
 
-            scanButton = MakeSmallButton(sites, 0, "Scan now");
+            var actions = new TableLayoutPanel();
+            actions.Name = "ActionButtons";
+            actions.SetBounds(16, 166, 344, 32);
+            actions.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            actions.ColumnCount = 4;
+            actions.RowCount = 1;
+            actions.Margin = Padding.Empty;
+            actions.Padding = Padding.Empty;
+            actions.BackColor = Theme.Card;
+            for (int column = 0; column < 4; column++)
+                actions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25f));
+            actions.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            sites.Controls.Add(actions);
+
+            scanButton = MakeSmallButton(actions, 0, "Scan now");
             scanButton.Click += (s, e) => app.ScanInBackground(true);
-            clearDnsButton = MakeSmallButton(sites, 1, "Clear DNS");
+            clearDnsButton = MakeSmallButton(actions, 1, "Clear DNS");
             clearDnsButton.Click += (s, e) =>
             {
                 Dns.Flush();
                 MessageBox.Show(this, "DNS cache cleared.\n\nNow open the launcher and wait for the ads. They will be found and blocked automatically.",
                     Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
-            addButton = MakeSmallButton(sites, 2, "Add site");
+            addButton = MakeSmallButton(actions, 2, "Add site");
             addButton.Click += (s, e) => AddSite();
-            removeButton = MakeSmallButton(sites, 3, "Unblock");
+            removeButton = MakeSmallButton(actions, 3, "Unblock");
             removeButton.Click += (s, e) => RemoveSelected();
 
             // ---- Footer ----
             lastCheckLabel = MakeLabel(this, 20, 588, 360, 20, Theme.Font(8.5f, false), Theme.Sub);
+            lastCheckLabel.Name = "LastCheckLabel";
+            lastCheckLabel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             lastCheckLabel.TextAlign = ContentAlignment.MiddleCenter;
             lastCheckLabel.Text = "Closing this window keeps it running in the tray";
 
@@ -1367,18 +1395,19 @@ namespace PickAds
             MakeLabel(card, 20, top + 24, 250, 18, Theme.Font(8.5f, false), Theme.Sub).Text = sub;
             var sw = new ToggleSwitch();
             sw.SetBounds(368 - 20 - 46, top + 10, 46, 26);
+            sw.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             card.Controls.Add(sw);
             return sw;
         }
 
-        static PillButton MakeSmallButton(Control card, int index, string text)
+        static PillButton MakeSmallButton(TableLayoutPanel row, int index, string text)
         {
             var b = new PillButton();
             b.Text = text;
             b.Font = Theme.Font(9f, true);
-            int w = 78, gap = 8;
-            b.SetBounds(16 + index * (w + gap), 166, w, 32);
-            card.Controls.Add(b);
+            b.Dock = DockStyle.Fill;
+            b.Margin = new Padding(0, 0, 8, 0);
+            row.Controls.Add(b, index, 0);
             return b;
         }
 

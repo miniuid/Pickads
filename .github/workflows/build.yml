@@ -20,6 +20,14 @@ jobs:
           dotnet-version: '8.0.419'
       - name: Build Windows executable
         run: dotnet build PickAds.csproj -c Release -o dist
+      - name: Check resizable Windows layout
+        shell: pwsh
+        run: |
+          $compiler = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+          & $compiler /nologo /target:exe /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /out:dist/ResizeLayoutChecks.exe tests/ResizeLayoutChecks.cs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & dist/ResizeLayoutChecks.exe dist/PickAds.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Calculate checksum
         shell: pwsh
         run: |

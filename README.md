@@ -89,3 +89,12 @@ Blocking ads means launchers and creators earn less from you. On Modrinth, part 
 Open PickAds, approve its administrator prompt, and turn on **Start with Windows**. Confirm the explanation. The app copies itself into a new protected `Program Files\PickAds-Startup-<random>` folder and registers a scheduled task for the current Windows identity, starting 15 seconds after sign-in with highest available privileges. This is intended for Windows administrator accounts; it does not grant administrator rights to standard accounts. Approving UAC as another account sets up startup for that account instead.
 
 Turn the switch off to remove the task and the older PickAdsReviewed Run entry. Protected installed files remain. To update the startup copy: turn startup off, exit PickAds, open the new EXE, and turn startup on again. Moving the downloaded EXE does not move the installed startup copy. Existing legacy tasks named PickAds or MC Ad Blocker are not changed. Antivirus protection remains enabled; do not bypass detections. Login behavior has not been tested on Windows in this environment.
+
+## Resize the window
+
+Drag a window edge or corner to resize PickAds, or use the title-bar maximize button.
+The domain list expands with the window; settings stay aligned and the bottom buttons
+share the available width. The original small size is the minimum to avoid clipping.
+
+When updating from an older startup copy: turn **Start with Windows** off, exit
+PickAds through the tray, open the new EXE, then enable startup again if wanted.

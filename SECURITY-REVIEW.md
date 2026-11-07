@@ -36,3 +36,15 @@ Keep the old EXE quarantined. Inspect and remove the old PickAds scheduled task 
 ## Optional startup update
 
 The Start with Windows switch now explicitly opts into a current-user Run entry named PickAdsReviewed. It defaults absent/off, can be removed with the switch, and is never migrated or refreshed automatically. The executable manifest is asInvoker; Main still asks for UAC approval before starting the privileged UI, including at sign-in. No highest-privilege task or UAC bypass is used. Earlier statements about removing scheduled tasks remain accurate; startup now uses this separate mechanism. This update compiled successfully, but login, UAC, registry permissions and startup behavior still require Windows testing. Existing saved binaries/checksums above describe the earlier build, not this update.
+
+## Resizable Windows UI update
+
+Enabled sizable window borders and maximize, preserved the original minimum size,
+anchored cards/list/footer/switches and distributed action buttons in a table row.
+No blocking or startup routines were changed in this revision. Compiled against
+Mono's .NET Framework 4.8 reference API; 75 UI-only assertions passed under
+Mono/Xvfb for wide, tall, enlarged and restored layouts. The test constructs the
+form without TrayApp and never executes hosts or startup actions. The committed
+Windows build workflow also compiles and runs the checks using Microsoft's
+Framework compiler. That workflow's outcome has not been confirmed here; native
+Windows DPI/multi-monitor behavior still needs desktop testing.
