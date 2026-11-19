@@ -1,9 +1,15 @@
 {
-  "tag": "pickads-windows-safer",
+  "tag": "v1.2.0-beta.1",
   "source_commit": "2fe71b4228bf6e2993a8886d8500f8a48ebc5db7",
   "build": "success",
-  "publish": "skipped",
-  "run_url": "https://github.com/miniuid/Pickads/actions/runs/44549131981",
-  "complete": false,
-  "diagnostics": {}
+  "publish": "success",
+  "run_url": "https://github.com/miniuid/Pickads/actions/runs/44549561744",
+  "complete": true,
+  "release_url": "https://github.com/miniuid/Pickads/releases/tag/v1.2.0-beta.1",
+  "assets": [
+    "PickAds-Windows-Safer-Preview.zip",
+    "PickAds.exe",
+    "PickAds.exe.sha256"
+  ],
+  "sha256": "2b4a854cb79e26c68b000a45fd73516e5f2ffb05b41134a61ce71544ea70af7e"
 }
