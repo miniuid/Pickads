@@ -51,6 +51,13 @@ jobs:
         run: |
           $hash = (Get-FileHash dist/PickAds.exe -Algorithm SHA256).Hash.ToLower()
           "$hash  PickAds.exe" | Set-Content -Encoding ascii dist/PickAds.exe.sha256
+      - name: Package Windows ZIP
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP "PickAds-release-package"
+          New-Item -ItemType Directory -Force $package | Out-Null
+          Copy-Item dist/PickAds.exe, dist/PickAds.exe.sha256, README.md, SECURITY-REVIEW.md, LICENSE -Destination $package
+          Compress-Archive -LiteralPath (Get-ChildItem -File $package).FullName -DestinationPath dist/PickAds-Windows-Safer-Preview.zip -Force
       - name: Upload download
         uses: actions/upload-artifact@v4
         with:
@@ -59,6 +66,60 @@ jobs:
           path: |
             dist/PickAds.exe
             dist/PickAds.exe.sha256
+            dist/PickAds-Windows-Safer-Preview.zip
             SECURITY-REVIEW.md
             README.md
             LICENSE
+            RELEASE-NOTES.md
+
+  publish:
+    if: github.ref == 'refs/tags/v1.2.0-beta.1'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: PickAds-Windows-Safer-Preview
+          path: release-assets
+      - name: Create draft and upload verified build assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PICKADS_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$PICKADS_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft --prerelease \
+            --title "PickAds 1.2.0 Beta 1 — Safer Preview" \
+            --notes-file release-assets/RELEASE-NOTES.md \
+            release-assets/dist/PickAds.exe \
+            release-assets/dist/PickAds.exe.sha256 \
+            release-assets/dist/PickAds-Windows-Safer-Preview.zip
+      - name: Publish the completed prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PICKADS_TAG: ${{ github.ref_name }}
+        run: gh release edit "$PICKADS_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease
+
+  release-status:
+    if: always() && (github.ref == 'refs/tags/v1.2.0-beta.1' || github.ref == 'refs/heads/pickads-windows-safer')
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        if: needs.build.result != 'success'
+        continue-on-error: true
+        with:
+          name: PickAds-Safer-Build-Diagnostics
+          path: release-diagnostics
+      - name: Verify the release and record its status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PICKADS_BUILD_RESULT: ${{ needs.build.result }}
+          PICKADS_PUBLISH_RESULT: ${{ needs.publish.result }}
+        run: python3 .github/scripts/release_status.py
