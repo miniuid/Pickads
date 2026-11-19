@@ -5,3 +5,4 @@ dist/
 .vs/
 layout-checks/
 test-results/
+security-checks/

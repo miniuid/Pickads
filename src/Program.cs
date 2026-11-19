@@ -23,46 +23,45 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("PickAds")]
 [assembly: AssemblyDescription("PickAds - blocks ads in Minecraft launchers using the Windows hosts file")]
 [assembly: AssemblyCompany("PickAds")]
-[assembly: AssemblyCopyright("Copyright (c) 2026 PickAds. MIT License.")]
-[assembly: AssemblyInformationalVersion("1.0.0")]
+[assembly: AssemblyCopyright("Copyright (c) 2026 miniuid. MIT License.")]
+[assembly: AssemblyInformationalVersion("1.2.0-safer-preview")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.8", FrameworkDisplayName = ".NET Framework 4.8")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 
 namespace PickAds
 {
     static class Program
     {
-        public const string AppName = "PickAds";
-        public const string ShowEventName = "Local\\PickAds_ShowWindow";
+        public const string AppName = "PickAds Safer Preview";
+        public const string ShowEventName = "Local\\PickAdsSafer_ShowWindow";
 
         [STAThread]
         static void Main(string[] args)
         {
             bool startHidden = args.Any(a => a.Equals("--tray", StringComparison.OrdinalIgnoreCase));
 
-            // Editing the hosts file needs admin rights. The manifest normally takes care
-            // of this, but relaunch elevated just in case.
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT && !IsAdmin())
+            if (args.Length == 2 && args[0] == "--hosts-helper")
             {
-                try
-                {
-                    var psi = new ProcessStartInfo(Application.ExecutablePath, startHidden ? "--tray" : "");
-                    psi.Verb = "runas";
-                    psi.UseShellExecute = true;
-                    Process.Start(psi);
-                }
-                catch
-                {
-                    MessageBox.Show("PickAds needs administrator permission because it blocks ads " +
-                        "through the Windows hosts file.\n\nPlease open it again and click Yes when Windows asks.",
-                        AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                try { Environment.ExitCode = HostsElevation.RunHelper(args[1]); }
+                catch { Environment.ExitCode = 1; }
+                return;
+            }
+            if (args.Any(a => a != "--tray" && a != "--window"))
+            {
+                Environment.ExitCode = 2;
+                return;
+            }
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT && IsAdmin())
+            {
+                MessageBox.Show("Open PickAds normally, without Run as administrator.\n\n" +
+                    "This version asks for permission only when applying or removing system blocks.",
+                    AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             bool firstInstance;
-            using (var mutex = new Mutex(true, "Local\\PickAds_SingleInstance", out firstInstance))
+            using (var mutex = new Mutex(true, "Local\\PickAdsSafer_SingleInstance", out firstInstance))
             {
                 if (!firstInstance)
                 {
@@ -79,7 +78,7 @@ namespace PickAds
             }
         }
 
-        static bool IsAdmin()
+        internal static bool IsAdmin()
         {
             try
             {
@@ -122,28 +121,53 @@ namespace PickAds
         static readonly string[] AdSuffixes = {
             "doubleclick.net","googlesyndication.com","googletagservices.com","googleadservices.com","2mdn.net",
             "adnxs.com","adsrvr.org","amazon-adsystem.com","publisher-services.amazon.dev","rubiconproject.com",
-            "pubmatic.com","openx.net","casalemedia.com","indexww.com","tribalfusion.com","yieldmo.com",
-            "applovin.com","connatix.com","kargo.com","agkn.com","nexx360.io","gumgum.com","servicesadmedia.com",
-            "rlcdn.com","id5-sync.com","dv.tech","doubleverify.com","adsafeprotected.com","moatads.com",
-            "onetag-sys.com","rfihub.com","tapad.com","adentifi.com","smartytech.io","scalibur.io","rtbscale.com",
-            "unrulymedia.com","simpli.fi","cognitivlabs.com","criteo.com","criteo.net","taboola.com","outbrain.com",
-            "3lift.com","sharethrough.com","teads.tv","media.net","lijit.com","sovrn.com","contextweb.com",
+            "pubmatic.com","openx.net","casalemedia.com","indexww.com","tribalfusion.com",
+            "yieldmo.com","applovin.com","connatix.com","kargo.com","agkn.com",
+            "nexx360.io","gumgum.com","servicesadmedia.com","rlcdn.com","id5-sync.com",
+            "dv.tech","doubleverify.com","adsafeprotected.com","moatads.com","onetag-sys.com",
+            "rfihub.com","tapad.com","adentifi.com","smartytech.io","scalibur.io",
+            "rtbscale.com","unrulymedia.com","simpli.fi","cognitivlabs.com","criteo.com",
+            "criteo.net","taboola.com","outbrain.com","3lift.com","sharethrough.com",
+            "teads.tv","media.net","lijit.com","sovrn.com","contextweb.com",
             "bidswitch.net","smartadserver.com","adform.net","quantserve.com","scorecardresearch.com",
-            "crwdcntrl.net","bluekai.com","exelator.com","everesttech.net","adition.com","33across.com",
-            "yahoo-ads.com","adsymptotic.com","bidr.io","sitescout.com","mathtag.com","turn.com","zemanta.com",
-            "advertising.com","adcolony.com","inmobi.com","vungle.com","unityads.unity3d.com","adsterra.com",
-            "propellerads.com","popads.net","exoclick.com","adskeeper.com","mgid.com","revcontent.com",
-            "playwire.com","venatus.com","venatusmedia.com","nitropay.com","ezoic.net","ezojs.com",
-            "adthrive.com","raptive.com","mediavine.com","freestar.com","freestar.io","pubfuture.com",
-            "aniview.com","primis.tech","vidazoo.com","sonobi.com","emxdgt.com","yieldlab.net","adkernel.com",
-            "e-planning.net","rhythmone.com","gammaplatform.com","undertone.com","stickyadstv.com","spotxchange.com",
-            "spotx.tv","springserve.com","lkqd.net","tremorhub.com","adsco.re","imasdk.googleapis.com"
+            "crwdcntrl.net","bluekai.com","exelator.com","everesttech.net","adition.com",
+            "33across.com","yahoo-ads.com","adsymptotic.com","bidr.io","sitescout.com",
+            "mathtag.com","turn.com","zemanta.com","advertising.com","adcolony.com",
+            "inmobi.com","vungle.com","unityads.unity3d.com","adsterra.com","propellerads.com",
+            "popads.net","exoclick.com","adskeeper.com","mgid.com","revcontent.com",
+            "playwire.com","venatus.com","venatusmedia.com","nitropay.com","ezoic.net",
+            "ezojs.com","adthrive.com","raptive.com","mediavine.com","freestar.com",
+            "freestar.io","pubfuture.com","aniview.com","primis.tech","vidazoo.com",
+            "sonobi.com","emxdgt.com","yieldlab.net","adkernel.com","e-planning.net",
+            "rhythmone.com","gammaplatform.com","undertone.com","stickyadstv.com","spotxchange.com",
+            "spotx.tv","springserve.com","lkqd.net","tremorhub.com","adsco.re",
+            "imasdk.googleapis.com","serving-sys.com","innovid.com","flashtalking.com","adroll.com",
+            "mookie1.com","demdex.net","omnitagjs.com","smilewanted.com","richaudience.com",
+            "improvedigital.com","360yield.com","adyoulike.com","justpremium.com","gothamads.com",
+            "yieldone.com","adhigh.net","ad.gt","kueezrtb.com","adlightning.com",
+            "pubnation.com","adtelligent.com","insticator.com","seedtag.com","a-mo.net",
+            "adnium.com","adspirit.de","adtech.com","adtechus.com","adbutler.com",
+            "bttrack.com","brealtime.com","clickagy.com","connectad.io","cootlogix.com",
+            "deepintent.com","districtm.io","emxdgt.com","eyeota.net","getclicky.com",
+            "gumgum.com","hybrid.ai","inskinmedia.com","intentiq.com","ipredictive.com",
+            "jwpltx.com","kargo.com","liadm.com","lijit.com","loopme.me",
+            "mediago.io","medianet.com","nativo.com","nexac.com","onaudience.com",
+            "openx.net","outbrain.com","ozone.media","pixfuture.com","postrelease.com",
+            "pubmine.com","quantcast.com","rfihub.net","rtbhouse.com","rubiconproject.com",
+            "sascdn.com","sekindo.com","sitescout.com","smartyads.com","sovrn.com",
+            "stackadapt.com","stroeerdigitalgroup.de","synacor.com","tappx.com","themediagrid.com",
+            "tidaltv.com","triplelift.com","truex.com","undertone.com","unrulymedia.com",
+            "vidoomy.com","viralize.tv","w55c.net","yieldmo.com","zeotap.com",
+            "1rx.io","adtdp.com","adgrx.com","adsmoloco.com","moloco.com",
+            "liftoff.io","ironsrc.com","supersonicads.com","chartboost.com","fyber.com",
+            "inner-active.mobi","tapjoy.com","bidmachine.io","pubnative.net","verve.com",
+            "ogury.com","smaato.net","startappservice.com","start.io","mintegral.com",
+            "mobfox.com","nend.net","aditude.io","aditude.com","dn0qt3r0xannq.cloudfront.net",
+            "d12i9gpbwjxyjv.cloudfront.net",
         };
 
         // Domain labels that clearly mean "ads", e.g. ads.example.com, rtb0.example.com
-        static readonly Regex AdLabel = new Regex(
-            @"^(ad|ads|adserver|adservice|adsrv|adserve|rtb\d*|prebid.*|.*adsystem.*|.*doubleclick.*|pagead\d*|securepubads|googleads\d*)$",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        static readonly Regex AdLabel = new Regex("^(ad|ads|adserver|adservice|adsrv|adserve|advert|adverts|advertising|adx|adimg|adcdn|ad-cdn|adtag|adtags|adunit|adunits|adsdk|adsapi|ads-api|ad-api|adserving|adsvc|banner|banners|sponsored|sponsors|rtb\\d*|prebid.*|.*adsystem.*|.*doubleclick.*|pagead\\d*|securepubads|googleads\\d*|ssp|dsp|vast|vpaid)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // Never auto-block these (launchers, Minecraft login/skins, Windows, common apps).
         static readonly string[] SafeSuffixes = {
@@ -207,9 +231,7 @@ namespace PickAds
     static class Store
     {
         public static readonly string DataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "PickAds");
-        static readonly string OldDataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "MCAdBlocker");
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PickAds");
         static readonly string ListPath = Path.Combine(DataDir, "blocklist.txt");
         static readonly string SettingsPath = Path.Combine(DataDir, "settings.txt");
         static readonly string AllowPath = Path.Combine(DataDir, "never-block.txt");
@@ -226,21 +248,19 @@ namespace PickAds
 
         // Ad hosts seen in Minecraft launchers, so blocking works right away.
         static readonly string[] Starter = {
-            "a.tribalfusion.com","ad.doubleclick.net","ade.googlesyndication.com","ads.yieldmo.com",
-            "aax.amazon-adsystem.com","aax-events-cell02-cf.us-west.3px.axp.amazon-adsystem.com",
-            "b.applovin.com","beacon.lynx.cognitivlabs.com","c.amazon-adsystem.com","capi.connatix.com",
-            "crb.kargo.com","d.agkn.com","direct.adsrvr.org","fast.nexx360.io","g2.gumgum.com","gcdn.2mdn.net",
-            "googleads.g.doubleclick.net","googleads4.g.doubleclick.net","gpm.servicesadmedia.com",
-            "hbopenbid.pubmatic.com","ib.adnxs.com","id.rlcdn.com","id5-sync.com","imasdk.googleapis.com",
-            "maestro-ue1.tps.dv.tech","onetag-sys.com","p.rfihub.com","pagead2.googlesyndication.com",
-            "pixel.tapad.com","prebid-server.rubiconproject.com",
-            "prod.us-east-1.cxm-bcn.publisher-services.amazon.dev","px.ads.linkedin.com","rtb.adentifi.com",
-            "rtb0.doubleverify.com","s.amazon-adsystem.com","s0.2mdn.net","secure.adnxs.com",
-            "securepubads.g.doubleclick.net","server.smartytech.io","srv.scalibur.io","stats.g.doubleclick.net",
-            "t.rtbscale.com","targeting.unrulymedia.com","tpc.googlesyndication.com","u.openx.net","um.simpli.fi",
-            "web-video.ads.aps.amazon-adsystem.com","www.googletagservices.com","a6316.casalemedia.com",
-            "fastlane.rubiconproject.com","ads.pubmatic.com","static.doubleclick.net","cm.g.doubleclick.net",
-            "z.moatads.com","pixel.adsafeprotected.com","static.adsafeprotected.com","acdn.adnxs.com"
+            "a.tribalfusion.com","ad.doubleclick.net","ade.googlesyndication.com","ads.yieldmo.com","aax.amazon-adsystem.com",
+            "aax-events-cell02-cf.us-west.3px.axp.amazon-adsystem.com","b.applovin.com","beacon.lynx.cognitivlabs.com","c.amazon-adsystem.com","capi.connatix.com",
+            "crb.kargo.com","d.agkn.com","direct.adsrvr.org","fast.nexx360.io","g2.gumgum.com",
+            "gcdn.2mdn.net","googleads.g.doubleclick.net","googleads4.g.doubleclick.net","gpm.servicesadmedia.com","hbopenbid.pubmatic.com",
+            "ib.adnxs.com","id.rlcdn.com","id5-sync.com","imasdk.googleapis.com","maestro-ue1.tps.dv.tech",
+            "onetag-sys.com","p.rfihub.com","pagead2.googlesyndication.com","pixel.tapad.com","prebid-server.rubiconproject.com",
+            "prod.us-east-1.cxm-bcn.publisher-services.amazon.dev","px.ads.linkedin.com","rtb.adentifi.com","rtb0.doubleverify.com","s.amazon-adsystem.com",
+            "s0.2mdn.net","secure.adnxs.com","securepubads.g.doubleclick.net","server.smartytech.io","srv.scalibur.io",
+            "stats.g.doubleclick.net","t.rtbscale.com","targeting.unrulymedia.com","tpc.googlesyndication.com","u.openx.net",
+            "um.simpli.fi","web-video.ads.aps.amazon-adsystem.com","www.googletagservices.com","a6316.casalemedia.com","fastlane.rubiconproject.com",
+            "ads.pubmatic.com","static.doubleclick.net","cm.g.doubleclick.net","z.moatads.com","pixel.adsafeprotected.com",
+            "static.adsafeprotected.com","acdn.adnxs.com","dn0qt3r0xannq.cloudfront.net","cdn.aditude.io","aditude.io",
+            "aditude.com",
         };
 
         static readonly object Gate = new object();
@@ -300,16 +320,6 @@ namespace PickAds
             lock (Gate)
             {
                 Directory.CreateDirectory(DataDir);
-                // Carry over blocklist and settings from the older "MC Ad Blocker" version.
-                if (!File.Exists(ListPath) && Directory.Exists(OldDataDir))
-                {
-                    foreach (string f in Directory.GetFiles(OldDataDir))
-                    {
-                        string dest = Path.Combine(DataDir, Path.GetFileName(f));
-                        try { if (!File.Exists(dest)) File.Copy(f, dest); } catch { }
-                    }
-                    settings = null;
-                }
                 bool firstRun = !File.Exists(ListPath);
                 LoadList();
                 if (firstRun)
@@ -317,9 +327,6 @@ namespace PickAds
                     foreach (string d in Starter) blocklist.Add(d);
                     // Bring over anything the older PowerShell version blocked.
                     foreach (string d in ReadBlockedFromHosts()) if (AdRules.IsValidHost(d)) blocklist.Add(d);
-                    string oldList = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "blocklist.txt");
-                    if (File.Exists(oldList))
-                        foreach (string d in ReadDomainFile(oldList)) blocklist.Add(d);
                     SaveList();
                 }
             }
@@ -396,7 +403,7 @@ namespace PickAds
                 if (added.Count > 0)
                 {
                     SaveList();
-                    if (IsBlockingOn()) WriteHosts(true);
+                    // Detected/list changes are staged until the user clicks Apply new blocks.
                 }
                 return added;
             }
@@ -416,7 +423,7 @@ namespace PickAds
                 {
                     SaveList();
                     SaveAllow();
-                    if (IsBlockingOn()) WriteHosts(true);
+                    // Detected/list changes are staged until the user clicks Apply new blocks.
                 }
             }
         }
@@ -465,58 +472,16 @@ namespace PickAds
 
         static void WriteHosts(bool includeBlock)
         {
-            var lines = new List<string>();
-            bool inside = false;
-            foreach (string line in ReadHosts())
+            HostsElevation.Apply(blocklist.ToArray(), includeBlock);
+        }
+
+        public static bool HasPendingChanges()
+        {
+            lock (Gate)
             {
-                string t = line.Trim();
-                if (IsStart(t)) { inside = true; continue; }
-                if (IsEnd(t)) { inside = false; continue; }
-                if (!inside) lines.Add(line);
+                LoadList();
+                return IsBlockingOn() && !blocklist.SetEquals(ReadBlockedFromHosts());
             }
-            while (lines.Count > 0 && lines[lines.Count - 1].Trim().Length == 0) lines.RemoveAt(lines.Count - 1);
-
-            if (includeBlock)
-            {
-                lines.Add("");
-                lines.Add(StartMarker);
-                lines.Add("# Added by PickAds. Turn blocking off in the app to remove these lines.");
-                foreach (string d in blocklist)
-                {
-                    lines.Add("0.0.0.0 " + d);
-                    lines.Add(":: " + d);
-                }
-                lines.Add(EndMarker);
-            }
-
-            if (inside)
-                throw new IOException("The hosts file has an unmatched PickAds marker. No changes were made.");
-
-            // Preserve the original bytes before the first edit; fail closed if backup fails.
-            string backup = HostsPath + ".pickads-backup";
-            if (File.Exists(HostsPath) && !File.Exists(backup)) File.Copy(HostsPath, backup, false);
-
-            string text = string.Join("\r\n", lines.ToArray()) + "\r\n";
-
-            // The hosts file can be briefly locked by Windows or antivirus; retry a few times.
-            Exception last = null;
-            for (int attempt = 0; attempt < 5; attempt++)
-            {
-                try
-                {
-                    var fi = new FileInfo(HostsPath);
-                    if (fi.Exists && fi.IsReadOnly)
-                        throw new IOException("The hosts file is read-only. PickAds will not override that protection.");
-                    File.WriteAllText(HostsPath, text, new UTF8Encoding(false));
-                    last = null;
-                    break;
-                }
-                catch (Exception ex) { last = ex; Thread.Sleep(300); }
-            }
-            if (last != null)
-                throw new IOException("Could not edit the Windows hosts file. Your antivirus may be protecting it.\n\n" + last.Message, last);
-
-            Dns.Flush();
         }
     }
 
@@ -530,11 +495,10 @@ namespace PickAds
 
         public static void Flush()
         {
-            try { DnsFlushResolverCache(); }
-            catch
-            {
-                try { RunHidden(Path.Combine(Environment.SystemDirectory, "ipconfig.exe"), "/flushdns"); } catch { }
-            }
+            try { if (DnsFlushResolverCache()) return; }
+            catch (DllNotFoundException) { }
+            catch (EntryPointNotFoundException) { }
+            RunHidden(Path.Combine(Environment.SystemDirectory, "ipconfig.exe"), "/flushdns");
         }
 
         public static HashSet<string> ReadCache()
@@ -568,7 +532,11 @@ namespace PickAds
                 foreach (Match m in Regex.Matches(output, @":\s*([A-Za-z0-9._-]+\.[A-Za-z][A-Za-z0-9-]*)\s*$", RegexOptions.Multiline))
                     AddName(set, m.Groups[1].Value);
             }
-            catch (Exception ex) { Log.Write("ipconfig DNS read failed: " + ex.Message); }
+            catch (Exception ex)
+            {
+                Log.Write("ipconfig DNS read failed: " + ex.Message);
+                throw new IOException("Could not read the Windows DNS cache. This scan did not complete.", ex);
+            }
             return set;
         }
 
@@ -588,107 +556,40 @@ namespace PickAds
             psi.RedirectStandardError = true;
             using (var p = Process.Start(psi))
             {
-                var errTask = p.StandardError.ReadToEndAsync();
-                string output = p.StandardOutput.ReadToEnd();
-                p.WaitForExit(15000);
-                return output + errTask.Result;
+                var error = p.StandardError.ReadToEndAsync();
+                var output = p.StandardOutput.ReadToEndAsync();
+                if (!p.WaitForExit(15000))
+                {
+                    p.Kill();
+                    throw new IOException("Windows DNS command timed out.");
+                }
+                if (p.ExitCode != 0) throw new IOException("Windows DNS command failed: " + error.Result.Trim());
+                return output.Result;
             }
         }
 
 
     }
 
-    // Explicitly approved elevated logon task; executable stored with a protected ACL.
+    // Optional ordinary-user startup: never creates an elevated task or installs
+    // another executable. The UI must be opened normally to edit this user's Run key.
     static class Startup
     {
-        const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        const string ValueName = "PickAdsReviewed";
-        static string Sid { get { return WindowsIdentity.GetCurrent().User.Value; } }
-        static string TaskName { get { return "PickAds-Reviewed-" + Sid; } }
-
-        static int RunTaskTool(string args, out string output)
-        {
-            var psi = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "schtasks.exe"), args);
-            psi.UseShellExecute = false;
-            psi.CreateNoWindow = true;
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError = true;
-            using (var process = Process.Start(psi))
-            {
-                var stdout = process.StandardOutput.ReadToEndAsync();
-                var stderr = process.StandardError.ReadToEndAsync();
-                if (!process.WaitForExit(20000))
-                {
-                    process.Kill();
-                    throw new IOException("Windows Task Scheduler did not respond in time. Check Task Scheduler before retrying.");
-                }
-                output = stdout.Result + stderr.Result;
-                return process.ExitCode;
-            }
-        }
-
+        const string KeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+        const string ValueName = "PickAdsSafer";
+        static string Command { get { return "\"" + Application.ExecutablePath + "\" --tray"; } }
         public static bool IsEnabled()
         {
-            string output;
-            return RunTaskTool("/Query /TN \"" + TaskName + "\"", out output) == 0;
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(KeyPath))
+                return key != null && string.Equals(key.GetValue(ValueName) as string, Command, StringComparison.OrdinalIgnoreCase);
         }
-
-        static void RemoveOldRunEntry()
-        {
-            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RunKey, true))
-                if (key != null) key.DeleteValue(ValueName, false);
-        }
-
         public static void SetEnabled(bool enabled)
         {
-            string output;
-            if (!enabled)
+            using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(KeyPath))
             {
-                if (IsEnabled() && RunTaskTool("/Delete /TN \"" + TaskName + "\" /F", out output) != 0)
-                    throw new IOException("Could not remove startup task: " + output);
-                RemoveOldRunEntry();
-                return;
+                if (enabled) key.SetValue(ValueName, Command, Microsoft.Win32.RegistryValueKind.String);
+                else key.DeleteValue(ValueName, false);
             }
-            // Use a fresh directory, never an existing user-controlled installation.
-            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            if (string.IsNullOrEmpty(programFiles) ||
-                (File.GetAttributes(programFiles) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("A normal protected Program Files folder is required.");
-            string folder = Path.Combine(programFiles, "PickAds-Startup-" + Guid.NewGuid().ToString("N"));
-            var acl = new System.Security.AccessControl.DirectorySecurity();
-            acl.SetAccessRuleProtection(true, false);
-            foreach (var role in new[] { WellKnownSidType.BuiltinAdministratorsSid, WellKnownSidType.LocalSystemSid, WellKnownSidType.BuiltinUsersSid })
-            {
-                var rights = role == WellKnownSidType.BuiltinUsersSid
-                    ? System.Security.AccessControl.FileSystemRights.ReadAndExecute
-                    : System.Security.AccessControl.FileSystemRights.FullControl;
-                acl.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
-                    new SecurityIdentifier(role, null), rights,
-                    System.Security.AccessControl.InheritanceFlags.ContainerInherit | System.Security.AccessControl.InheritanceFlags.ObjectInherit,
-                    System.Security.AccessControl.PropagationFlags.None, System.Security.AccessControl.AccessControlType.Allow));
-            }
-            Directory.CreateDirectory(folder, acl);
-            string executable = Path.Combine(folder, "PickAds.exe");
-            File.Copy(Application.ExecutablePath, executable, false);
-            string xmlPath = Path.Combine(folder, "startup.xml");
-            string xml = "<?xml version=\"1.0\" encoding=\"UTF-16\"?>" +
-                "<Task version=\"1.2\" xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit/task\">" +
-                "<RegistrationInfo><Description>Opt-in PickAds startup with administrator privileges.</Description></RegistrationInfo>" +
-                "<Triggers><LogonTrigger><Enabled>true</Enabled><UserId>" + Sid + "</UserId><Delay>PT15S</Delay></LogonTrigger></Triggers>" +
-                "<Principals><Principal id=\"User\"><UserId>" + Sid + "</UserId><LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel></Principal></Principals>" +
-                "<Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>" +
-                "<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><ExecutionTimeLimit>PT0S</ExecutionTimeLimit></Settings>" +
-                "<Actions Context=\"User\"><Exec><Command>" + SecurityElement.Escape(executable) +
-                "</Command><Arguments>--tray</Arguments><WorkingDirectory>" + SecurityElement.Escape(folder) + "</WorkingDirectory></Exec></Actions></Task>";
-            File.WriteAllText(xmlPath, xml, Encoding.Unicode);
-            try
-            {
-                if (RunTaskTool("/Create /TN \"" + TaskName + "\" /XML \"" + xmlPath + "\" /F", out output) != 0)
-                    throw new IOException("Could not enable startup: " + output);
-                RemoveOldRunEntry();
-            }
-            finally { File.Delete(xmlPath); }
-            // Retain the protected EXE. Disabling removes the task, not installed files.
         }
     }
 
@@ -744,9 +645,10 @@ namespace PickAds
 
             var menu = new ContextMenuStrip();
             menu.Items.Add("Open PickAds", null, (s, e) => ShowWindow());
+            menu.Items.Add("Recent lookups", null, (s, e) => form.ShowLookups());
             menu.Items.Add(new ToolStripSeparator());
             menuBlocking = new ToolStripMenuItem("Block ads", null, (s, e) => SetBlocking(!Store.IsBlockingOn()));
-            menuAuto = new ToolStripMenuItem("Find new ads automatically", null, (s, e) => SetAutoDetect(!Store.AutoDetect));
+            menuAuto = new ToolStripMenuItem("Find new ads automatically (review before applying)", null, (s, e) => SetAutoDetect(!Store.AutoDetect));
             menu.Items.Add(menuBlocking);
             menu.Items.Add(menuAuto);
             menu.Items.Add(new ToolStripSeparator());
@@ -799,7 +701,7 @@ namespace PickAds
             {
                 Store.SeenTrayTip = true;
                 tray.ShowBalloonTip(5000, Program.AppName,
-                    "Still running here and blocking ads. Right-click this icon to exit.", ToolTipIcon.Info);
+                    "Still running here. Detected domains need your approval before being applied. Right-click to exit.", ToolTipIcon.Info);
             }
         }
 
@@ -851,7 +753,7 @@ namespace PickAds
         {
             if (added.Count > 0)
             {
-                Log.Write("Blocked: " + string.Join(", ", added.ToArray()));
+                Log.Write("Detected " + added.Count + " new domain(s).");
                 form.AddActivity(added);
             }
             form.SetLastCheck(added.Count, error);
@@ -866,7 +768,7 @@ namespace PickAds
                     MessageBox.Show(form, "No new ad sites found.\n\nTip: open the launcher and wait for the ads to show, then scan again.",
                         Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 else
-                    MessageBox.Show(form, "Blocked " + added.Count + " new ad site(s).\n\nClose and reopen the launcher to remove the ads.",
+                    MessageBox.Show(form, "Found " + added.Count + " new ad site(s).\n\nReview the list, then click Apply new blocks. Administrator approval is required to apply changes.",
                         Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -878,7 +780,7 @@ namespace PickAds
                 if (DateTime.Now - lastNotify > TimeSpan.FromMinutes(2))
                 {
                     tray.ShowBalloonTip(5000, Program.AppName,
-                        "Blocked " + pendingNotify + " new ad site(s). If ads still show, restart the launcher.",
+                        "Found " + pendingNotify + " new ad site(s). Open PickAds to review and apply.",
                         ToolTipIcon.Info);
                     pendingNotify = 0;
                     lastNotify = DateTime.Now;
@@ -896,7 +798,7 @@ namespace PickAds
         {
             IWin32Window owner = form.Visible ? form : null;
             var answer = MessageBox.Show(owner,
-                "Exit PickAds?\n\nAds you already blocked stay blocked. It just stops finding new ones until you open it again.",
+                "Exit PickAds?\n\nExisting blocks stay active. Detection stops until you open PickAds again.",
                 Program.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (answer != DialogResult.Yes) return;
             timer.Stop();
@@ -1258,7 +1160,7 @@ namespace PickAds
 
         readonly Badge badge;
         readonly Label statusLabel, detailLabel, listLabel, hintLabel, lastCheckLabel;
-        readonly PillButton toggleButton, scanButton, clearDnsButton, addButton, removeButton;
+        readonly PillButton toggleButton, applyButton, scanButton, clearDnsButton, addButton, removeButton;
         readonly ToggleSwitch autoSwitch, startupSwitch, notifySwitch;
         readonly SiteList list;
         bool updating;
@@ -1302,7 +1204,28 @@ namespace PickAds
             toggleButton.SetBounds(20, 100, 328, 44);
             toggleButton.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             toggleButton.Click += (s, e) => app.SetBlocking(!Store.IsBlockingOn());
-            hero.Controls.Add(toggleButton);
+            var blockingActions = new TableLayoutPanel();
+            blockingActions.Name = "BlockingActions";
+            blockingActions.SetBounds(20, 100, 336, 44);
+            blockingActions.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            blockingActions.ColumnCount = 2;
+            blockingActions.RowCount = 1;
+            blockingActions.BackColor = Theme.Card;
+            blockingActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            blockingActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            blockingActions.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            toggleButton.Dock = DockStyle.Fill;
+            toggleButton.Margin = new Padding(0, 0, 8, 0);
+            blockingActions.Controls.Add(toggleButton, 0, 0);
+            applyButton = new PillButton();
+            applyButton.Name = "ApplyBlocks";
+            applyButton.Text = "Apply new blocks";
+            applyButton.Primary = true;
+            applyButton.Dock = DockStyle.Fill;
+            applyButton.Margin = new Padding(0, 0, 8, 0);
+            applyButton.Click += (s, e) => app.SetBlocking(true);
+            blockingActions.Controls.Add(applyButton, 1, 0);
+            hero.Controls.Add(blockingActions);
 
             // ---- Settings card ----
             var settings = new Card();
@@ -1311,11 +1234,11 @@ namespace PickAds
             settings.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             Controls.Add(settings);
 
-            autoSwitch = MakeSettingRow(settings, 0, "Auto-block new ads", "Checks for new ads in the background");
+            autoSwitch = MakeSettingRow(settings, 0, "Find new ads", "Detects domains; you approve changes");
             autoSwitch.Toggled += (s, e) => { if (!updating) app.SetAutoDetect(autoSwitch.On); };
-            startupSwitch = MakeSettingRow(settings, 1, "Start with Windows", "Starts in the tray without asking each time");
+            startupSwitch = MakeSettingRow(settings, 1, "Start with Windows", "Opens without administrator privileges");
             startupSwitch.Toggled += (s, e) => { if (!updating) SetStartup(startupSwitch.On); };
-            notifySwitch = MakeSettingRow(settings, 2, "Notifications", "Tell me when new ads get blocked");
+            notifySwitch = MakeSettingRow(settings, 2, "Notifications", "Tell me when new ad sites are found");
             notifySwitch.Toggled += (s, e) => { if (!updating) Store.Notify = notifySwitch.On; };
 
             // ---- Blocked sites card ----
@@ -1326,10 +1249,17 @@ namespace PickAds
             Controls.Add(sites);
 
             listLabel = MakeLabel(sites, 20, 14, 160, 22, Theme.Font(10.5f, true), Theme.Text);
-            hintLabel = MakeLabel(sites, 168, 16, 180, 20, Theme.Font(8.5f, false), Theme.Sub);
-            hintLabel.TextAlign = ContentAlignment.MiddleRight;
-            hintLabel.Text = "Select a site to unblock it";
-            hintLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            var lookupsLink = new LinkLabel();
+            lookupsLink.Text = "Recent lookups";
+            lookupsLink.Font = Theme.Font(8.5f, false);
+            lookupsLink.LinkColor = Theme.Accent;
+            lookupsLink.BackColor = Color.Transparent;
+            lookupsLink.SetBounds(168, 16, 180, 20);
+            lookupsLink.TextAlign = ContentAlignment.MiddleRight;
+            lookupsLink.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lookupsLink.LinkClicked += (sender, e) => ShowLookups();
+            sites.Controls.Add(lookupsLink);
+            hintLabel = lookupsLink;
 
             list = new SiteList();
             list.Name = "BlockedSitesList";
@@ -1356,9 +1286,13 @@ namespace PickAds
             clearDnsButton = MakeSmallButton(actions, 1, "Clear DNS");
             clearDnsButton.Click += (s, e) =>
             {
-                Dns.Flush();
-                MessageBox.Show(this, "DNS cache cleared.\n\nNow open the launcher and wait for the ads. They will be found and blocked automatically.",
-                    Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                try
+                {
+                    HostsElevation.Flush();
+                    MessageBox.Show(this, "DNS cache cleared. Open the launcher, wait for ads, then use Scan now.",
+                        Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex) { app.ShowError(ex); }
             };
             addButton = MakeSmallButton(actions, 2, "Add site");
             addButton.Click += (s, e) => AddSite();
@@ -1451,8 +1385,10 @@ namespace PickAds
 
                 badge.On = on;
                 badge.Invalidate();
-                statusLabel.Text = on ? "Ads are blocked" : "Blocking is off";
-                detailLabel.Text = on ? domains.Count + " ad sites blocked" : "Ads will show in your launchers";
+                statusLabel.Text = on ? "Blocking is on" : "Blocking is off";
+                bool pending = Store.HasPendingChanges();
+                detailLabel.Text = pending ? "List changes need your approval" : on ? domains.Count + " domains in the applied list" : "System blocking is off";
+                applyButton.Enabled = on && pending;
                 toggleButton.Primary = !on;
                 toggleButton.Text = on ? "Turn off blocking" : "Turn on blocking";
                 toggleButton.Invalidate();
@@ -1465,7 +1401,7 @@ namespace PickAds
                     catch (Exception ex) { startupSwitch.On = false; Log.Write("Startup read failed: " + ex.Message); }
                 }
 
-                listLabel.Text = "Blocked sites  (" + domains.Count + ")";
+                listLabel.Text = "Domain list  (" + domains.Count + ")";
                 var selected = new HashSet<string>(list.SelectedItems.Cast<string>());
                 int top = list.TopIndex;
                 list.BeginUpdate();
@@ -1485,7 +1421,7 @@ namespace PickAds
         {
             string time = DateTime.Now.ToString("h:mm tt");
             if (error != null) lastCheckLabel.Text = "Last check " + time + "  ·  failed (see log)";
-            else if (added > 0) lastCheckLabel.Text = "Last check " + time + "  ·  blocked " + added + " new";
+            else if (added > 0) lastCheckLabel.Text = "Last check " + time + "  ·  found " + added + " new (not yet applied)";
             else lastCheckLabel.Text = "Last check " + time + "  ·  nothing new";
         }
 
@@ -1505,11 +1441,9 @@ namespace PickAds
         {
             if (on && MessageBox.Show(this,
                 "Start PickAds when you sign in to Windows?\n\n" +
-                "This installs a protected copy in Program Files and creates a Windows scheduled task. " +
-                "That copy runs with administrator rights at sign-in without another permission prompt.\n\n" +
-                "Turn this switch off to remove the task. Installed files remain. " +
-                "To update the startup copy later, turn this off, open the new EXE, then turn it on again. " +
-                "Older PickAds tasks are not changed.",
+                "This creates an ordinary startup entry for this user. It never creates an elevated task.\n\n" +
+                "Keep this EXE in its current folder. Moving it breaks startup.\n\n" +
+                "IMPORTANT: This does not remove elevated startup tasks created by older PickAds versions. Disable those in Task Scheduler first.",
                 Program.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Question,
                 MessageBoxDefaultButton.Button2) != DialogResult.Yes)
             {
@@ -1519,6 +1453,22 @@ namespace PickAds
             try { Startup.SetEnabled(on); }
             catch (Exception ex) { app.ShowError(ex); }
             RefreshAll(true);
+        }
+
+        public void ShowLookups()
+        {
+            try
+            {
+                var known = new HashSet<string>(Store.Blocklist);
+                var domains = Dns.ReadCache().Where(d => !known.Contains(d)).OrderBy(d => d, StringComparer.Ordinal).ToList();
+                using (var dialog = new LookupsForm(domains))
+                    if (dialog.ShowDialog(this) == DialogResult.OK && dialog.ToBlock.Count > 0)
+                    {
+                        Store.Add(dialog.ToBlock, true);
+                        RefreshAll();
+                    }
+            }
+            catch (Exception ex) { app.ShowError(ex); }
         }
 
         void AddSite()

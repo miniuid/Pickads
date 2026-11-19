@@ -1,4 +1,4 @@
-name: Build PickAds
+name: Build PickAds Safer Preview
 
 on:
   push:
@@ -32,11 +32,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & .\layout-checks\ResizeLayoutChecks.exe "$PWD\dist\PickAds.exe" 2>&1 | Tee-Object test-results/layout-test.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check hosts helper security
+        shell: pwsh
+        run: |
+          dotnet build tests/HostsSecurityChecks.csproj -c Release -o security-checks 2>&1 | Tee-Object test-results/security-build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\security-checks\HostsSecurityChecks.exe "$PWD\dist\PickAds.exe" 2>&1 | Tee-Object test-results/security-test.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Save build diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: PickAds-Build-Diagnostics
+          name: PickAds-Safer-Build-Diagnostics
           if-no-files-found: warn
           path: test-results/
       - name: Calculate checksum
@@ -47,9 +54,11 @@ jobs:
       - name: Upload download
         uses: actions/upload-artifact@v4
         with:
-          name: PickAds-Windows
+          name: PickAds-Windows-Safer-Preview
           if-no-files-found: error
           path: |
             dist/PickAds.exe
             dist/PickAds.exe.sha256
             SECURITY-REVIEW.md
+            README.md
+            LICENSE

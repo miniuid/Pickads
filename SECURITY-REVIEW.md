@@ -1,62 +1,111 @@
-# Current startup behavior (latest update)
+# PickAds security review and safer preview
 
-At the user's explicit request, startup now uses a highest-available-privilege, interactive-token logon task for the current SID. It is off until the user confirms setup. Setup runs only through the existing administrator-approved application. The task runs a fresh copy under Program Files in a directory with a protected ACL: Administrators and SYSTEM have full control; Users have read/execute only. It never points at a Downloads or user-writable executable. Windows schtasks is resolved by absolute system path; task XML is created in the protected installation directory and deleted afterward. No credentials are stored and no Windows protection is disabled. Disabling removes the task and prior Run entry; copies remain installed. Updates require explicit off/on setup from the new binary. This feature requires an administrator account; it does not elevate a standard account. This update compiled with zero errors/warnings. Task creation/deletion, ACL enforcement, and sign-in behavior require Windows testing and are not verified here.
+## Uploaded file reviewed without execution
 
-The historical review below describes earlier revisions; its statements that scheduled startup was removed and later used only the Run key are superseded by this section. Prior hashes describe prior binaries.
+- Size: 88,576 bytes; managed Windows PE executable.
+- SHA-256: `ea2cb34dd9fbb515ee55dc847faa3a148f8119937752acfb6ad90453a9d0c423`.
+- This matches the supplied VirusTotal screenshot showing 11/71 detections.
+- Assembly version: 1.1.0.0. No Authenticode certificate table is present.
+- Decompiled as data with pinned ILSpy 9.1.0.7988, not executed, loaded as a runtime
+  assembly or uploaded to an external scanner by this task. Compared the managed
+  code with the known resizable-source build, including the additional Lookups view.
 
----
+No apparent remote-control channel, credential theft, keylogger, payload download,
+process injection or antivirus-disabling routine was found in the managed code
+reviewed. This is a limited static finding, not proof of absence or a false-positive
+verdict. The detection's cause remains unresolved. Several vendors can share
+engines; their count is not a probability of infection or safety.
 
-# PickAds source security review
+## Concrete risks in that upload
 
-## Scope and conclusion
-Reviewed every supplied text source/build/configuration file without executing the application or build scripts. The ZIP contains no EXE, DLL, dependency packages, or other executable payload. Images/icons were inventoried, not independently security-scanned.
+The upload does not match the previously reviewed/resizable source build. It has:
 
-No apparent RAT, remote command channel, credential theft, keylogging, payload downloader, obfuscated executable code, or antivirus-disabling behavior was found in the supplied C# source. This does not prove that the quarantined EXE matches this source or that either is malware-free. No antivirus scanner or Windows sandbox validation was performed.
+- A `requireAdministrator` manifest and an administrator-level interface/tray.
+- First-launch automatic hosts changes and DNS detection enabled by default.
+- Elevated logon tasks, automatic task refresh/migration and an executable task
+  target based on the running EXE's location.
+- Temporary task XML under a predictable user-temp filename.
+- Commands resolved by names such as `schtasks` and `ipconfig`.
+- Clearing hosts read-only protection, no first-edit recovery backup, and no
+  rejection of malformed section markers before rewriting hosts.
+- Extra ad rules and a DNS lookup view, which do not themselves establish malware.
 
-## Behaviors explaining the concern
-Original source requests administrator rights, modifies the system hosts file, reads the system DNS cache, runs ipconfig, and can register a highest-available-privilege logon task named PickAds. It also refreshes an existing task automatically and migrates an older task. Those task names match the screenshot, but that does not establish why Defender classified the binary. The source contains no facility for an attacker to send commands remotely.
+Those observations help explain the attack surface; they do not establish why any
+particular antivirus vendor classified the file. Its publisher/build provenance
+has not been established by this review.
 
-## Changes in this copy
-- Removed the entire scheduled-task implementation, automatic task refresh/migration, and startup setting. Existing tasks on a user's computer are not removed by this source change.
-- Removed automatic first-launch hosts modification. New installations require the user to turn blocking on.
-- Defaulted automatic DNS-cache monitoring to off. Existing saved auto=1 settings remain enabled.
-- Resolved ipconfig using the Windows system directory rather than executable search paths. Removed the now-unused task-query process helper.
-- Limited elevated relaunch arguments to the supported --tray flag.
-- Stopped clearing a read-only hosts attribute, added a first-edit backup next to hosts, and refused writes when a PickAds section is unclosed.
-- Replaced README guidance to bypass protection and its unsupported false-positive assurance.
+## New preview: security-relevant changes
 
-## Remaining risks and validation
-The application still runs its UI and tray process with administrator rights; separating privileged hosts edits into a narrow helper would require further design and Windows testing. Hosts changes affect every application, can block legitimate domains, and persist after exit. Shared ProgramData settings and executable placement should be reviewed for Windows ACLs before any elevated deployment. The backup is a first-edit recovery copy, not a transactional or concurrent-write guarantee.
+The replacement is rebuilt from reviewed repository source, not a patched/packed
+version of the uploaded binary. It keeps the resizable window and reconstructs
+its useful lookup view, 61 starter domains and expanded detection rules.
 
-Static checks confirm scheduled-task code is absent, all supplied process-launch sites were reviewed, and the patch touches only the changes described above. Installed Microsoft .NET SDK 8.0.419 and built the project targeting .NET Framework 4.8 with Microsoft reference assemblies. Build and clean rebuild both succeeded with zero warnings/errors and identical EXE SHA-256: 83fa05b480baf155d137afde1917b42fbd4c40124ff03988ea60560d6c1b2c0c. The output was identified as a Windows GUI .NET PE executable. This modified source has NOT been functionally tested on Windows, antivirus-scanned, or validated against the quarantined EXE. Do not treat this archive as a certified clean release.
+1. **Privilege separation:** interface, tray, DNS reading and settings run as an
+   ordinary user. Manually elevated GUI launches are refused. Only explicit
+   system-change actions request UAC. The helper handles one request and exits.
+2. **Narrow IPC:** a random named pipe grants access to the invoking SID and
+   elevated administrators. The elevated client explicitly uses anonymous
+   impersonation level so the ordinary server cannot impersonate its token.
+   Only enable, disable and DNS-flush operations are accepted; no paths, programs,
+   arbitrary commands or settings files are accepted across that boundary.
+   Domains/counts/line lengths are bounded. Timeouts and cancellations are errors.
+3. **No permanent elevation:** no service, elevated task, passwordless rule or
+   installed EXE copy is created. Optional startup uses only the ordinary user's
+   Run key and starts without administrator privileges.
+4. **Explicit review:** detection and list changes are staged. Apply new blocks
+   requires user action and administrator approval. Detection/startup default off
+   in the fresh per-user profile. Imported existing hosts entries are not silently
+   changed on first launch.
+5. **Hosts protections:** production helper selects the system hosts path itself.
+   Reparse-point paths, hard links on Windows, read-only files, oversized files,
+   invalid domains and ambiguous markers are refused. An exclusive write-sharing
+   policy prevents concurrent normal writes during editing. Unrelated bytes are
+   preserved, a first-edit backup is kept without overwrite, and write errors
+   trigger an attempt to restore the in-memory original. The original file handle
+   is used instead of replacing the file/ACL or clearing protection flags.
+6. **Other changes:** per-user LocalAppData settings, fixed Windows DNS command
+   paths, checked subprocess exit status/timeouts, no lookup preselection, and a
+   privacy confirmation before copying computer-wide DNS names. New-domain logs
+   record counts rather than domain names.
 
-## Windows follow-up
-Keep the old EXE quarantined. Inspect and remove the old PickAds scheduled task in Task Scheduler, and run Defender Offline/full scans. Build this source with build.bat on a Windows development machine, scan the newly generated EXE with current Defender definitions, then test with a disposable Windows VM snapshot. Verify no new scheduled task appears, hosts remains unchanged before opting in, monitoring defaults off with fresh settings, blocking on/off preserves unrelated hosts lines, the backup exists, and read-only/malformed hosts are refused. Investigate any new detection rather than excluding the app.
+## Validation completed
 
-## Optional startup update
+- App and both test projects built using Microsoft .NET SDK 8.0.419 / net48,
+  zero warnings and zero errors after refreshing the initially network-denied
+  NuGet audit cache. TLS, package signatures and vulnerability checks stayed on.
+- 38 managed security assertions passed under Mono against temporary fixtures:
+  strict protocol/count/line validation, injection rejection, malformed/duplicate
+  marker refusal, byte preservation, idempotency, disk update/removal, backups,
+  read-only protection and invalid helper arguments.
+- 78 UI/layout assertions passed under Mono/Xvfb: resize behavior, explicit Apply
+  control, lookup contents and no preselection. No system hosts file, startup
+  task or registry entry was changed by these checks.
 
-The Start with Windows switch now explicitly opts into a current-user Run entry named PickAdsReviewed. It defaults absent/off, can be removed with the switch, and is never migrated or refreshed automatically. The executable manifest is asInvoker; Main still asks for UAC approval before starting the privileged UI, including at sign-in. No highest-privilege task or UAC bypass is used. Earlier statements about removing scheduled tasks remain accurate; startup now uses this separate mechanism. This update compiled successfully, but login, UAC, registry permissions and startup behavior still require Windows testing. Existing saved binaries/checksums above describe the earlier build, not this update.
+## Not verified / remaining limits
 
-## Resizable Windows UI update
+Live Windows UAC/pipe permissions (including alternate admin credentials), Windows
+hard-link metadata enforcement, startup, power-loss recovery and native desktop
+behavior have NOT been exercised here. The committed Windows CI includes the
+hard-link test; its outcome is not yet confirmed. The build is unsigned and has
+NOT been antivirus-scanned or certified. It may still be flagged. Do not repack,
+obfuscate, add exclusions or bypass detections to make a scan pass; request vendor
+review of any disputed detection.
 
-Enabled sizable window borders and maximize, preserved the original minimum size,
-anchored cards/list/footer/switches and distributed action buttons in a table row.
-No blocking or startup routines were changed in this revision. Compiled against
-Mono's .NET Framework 4.8 reference API; 75 UI-only assertions passed under
-Mono/Xvfb for wide, tall, enlarged and restored layouts. The test constructs the
-form without TrayApp and never executes hosts or startup actions. The committed
-Windows build workflow also compiles and runs the checks using Microsoft's
-Framework compiler. That workflow's outcome has not been confirmed here; native
-Windows DPI/multi-monitor behavior still needs desktop testing.
+The helper is launched from the selected EXE with an ordinary UAC consent prompt;
+this is not a signed, protected installer/deployment scheme. It does not defend
+against malware already running as the user or administrator, or guarantee
+integrity of files downloaded from untrusted sources. A backup/rollback attempt
+cannot guarantee recovery after power loss or disk failure.
 
-### Build workflow follow-up
+**Existing elevated startup tasks are not removed by replacing an EXE.** Do not
+run the flagged old file merely to disable them. Inspect and disable the known
+PickAds tasks through Task Scheduler and older ordinary entries through Startup
+Apps. See README for upgrade instructions. Existing hosts blocks remain until
+explicitly removed. No claim is made that the user's PC is clean.
 
-The GitHub run for the first resizable revision failed, but its detailed error
-was not accessible from this environment. Replaced the legacy Framework compiler
-invocation for the checker with a dedicated SDK-style net48 project, using the
-same DPI manifest and bitness as the app. Added layout settling and diagnostic
-output without removing assertions. Both Microsoft SDK builds now succeed
-locally with zero warnings/errors, and the SDK-built pair passes all 75 assertions
-under Mono/Xvfb. App/test logs are uploaded on a failed run. This is a build
-workflow correction; the original remote failure cause and the new native
-Windows run outcome remain unconfirmed until the GitHub logs can be inspected.
+## Replacement identity
+
+Local preview version: 1.2.0-safer-preview.
+Local EXE SHA-256: `9fd81775619bfde414865f973fcfae79a8f518d4af38bc490fc84672886786d1`.
+GitHub's own rebuild can have a different hash; compare it with the checksum from
+that exact build, and keep its associated source and review report.

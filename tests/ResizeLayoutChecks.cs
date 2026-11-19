@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
 using System.IO;
+using System.Collections.Generic;
 
 static class ResizeLayoutChecks
 {
@@ -65,6 +66,7 @@ static class ResizeLayoutChecks
                 var list = Find(form, "BlockedSitesList");
                 var actions = (TableLayoutPanel)Find(form, "ActionButtons");
                 var footer = Find(form, "LastCheckLabel");
+                Check(Find(form, "ApplyBlocks").Text == "Apply new blocks", "System changes need an explicit Apply control");
                 var originalList = list.Size;
                 var originalCardWidth = hero.Width;
                 var originalFooterBottom = original.Height - footer.Bottom;
@@ -114,6 +116,13 @@ static class ResizeLayoutChecks
                 // Dismiss test form directly; do not call the real app's tray-close path.
                 type.GetField("AllowClose").SetValue(form, true);
                 form.Close();
+            }
+            using (var lookups = (Form)Activator.CreateInstance(assembly.GetType("PickAds.LookupsForm", true),
+                new object[] { new List<string> { "ads.example.com", "login.minecraft.net" } }))
+            {
+                var sites = (ListBox)Find(lookups, "LookupSites");
+                Check(sites.Items.Count == 2, "Lookup view must retain all queried names");
+                Check(sites.SelectedItems.Count == 0, "Lookup domains must not be preselected for blocking");
             }
             Console.WriteLine("PASS: " + checks + " resize layout assertions (wide, tall, large, restored).");
             return 0;

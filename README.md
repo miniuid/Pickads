@@ -1,100 +1,104 @@
-# Hardened source review copy
+# PickAds Safer Preview — Windows
 
-This modified source compiled successfully with .NET SDK 8.0.419 targeting .NET Framework 4.8. It has not been run or tested on Windows. It is not a malware-free certification. See SECURITY-REVIEW.md for findings and validation limits.
+An open-source Windows ad-domain blocker by **miniuid**, licensed
+under MIT. This experimental security-focused build preserves the resizable
+window, expanded detection rules and Recent lookups view, while reducing
+administrator privileges. It is not an antivirus certification.
 
-<p align="center">
-  <img src="assets/PickAds-icon.png" width="112" alt="PickAds logo">
-</p>
+## Important: the uploaded EXE was a different build
 
-<h1 align="center">PickAds</h1>
+The reviewed upload identified itself as version 1.1.0 and had SHA-256:
 
-<p align="center">
-  A small, free Windows app that blocks ads in Minecraft launchers like Lunar Client, Dawn Client and the Modrinth App.
-</p>
+`ea2cb34dd9fbb515ee55dc847faa3a148f8119937752acfb6ad90453a9d0c423`
 
-<p align="center">
-  <img src="assets/screenshot.png" width="640" alt="PickAds in light and dark mode">
-</p>
+Its hash matches the screenshot showing 11/71 detections. It was decompiled as
+**data**, never executed. It differs from our earlier reviewed source and lacks
+several protections. Do not substitute it for this source build or restore it
+from quarantine based on this review. See [SECURITY-REVIEW.md](SECURITY-REVIEW.md).
 
-## Get the Windows build
+## What changed
 
-After these files are pushed to GitHub, open **Actions**, select the latest successful **Build PickAds** run, and download **PickAds-Windows** under **Artifacts**. GitHub sign-in is required to download the ZIP. Extract the ZIP and scan the EXE with Defender before running it. Do not bypass a detection. GitHub building a file does not certify it as malware-free.
+- The main window, tray and detection run as your **normal user**. Do not use
+  Run as administrator. The manifest is `asInvoker`.
+- Windows approval is requested only for an explicit enable, disable, apply or
+  Clear DNS operation. A short-lived helper handles that one request and exits.
+- No elevated startup task, service, passwordless rule or installed startup copy
+  is created. Optional ordinary-user startup is off by default.
+- Automatic detection is off by default. It **proposes** domains; it does not
+  silently change the Windows hosts file. On Windows, use **Apply new blocks**.
+- Requests are bounded and validated, file paths are fixed in the helper, and the
+  helper's pipe connection disallows impersonating the elevated client.
+- Hosts edits keep unrelated bytes, refuse malformed/duplicate markers and
+  read-only/redirected/hard-linked files, keep a first-edit backup, and attempt
+  rollback if a write fails. No file protection is cleared.
+- Settings are per user in `%LOCALAPPDATA%\PickAds`, not shared ProgramData.
 
-## Features
+## Before updating: disable legacy startup
 
-- **One click** to turn ad blocking on or off
-- **Finds new ads automatically** in the background and blocks them
-- **Start with Windows** is optional and off by default. After approval it installs a protected startup copy and an elevated logon task, so an administrator account is not prompted at each sign-in.
-- **Unblock anything** with one click if a launcher stops working
-- Light and dark mode, matching your Windows setting
-- One small `.exe` (about 80 KB). Nothing to install. Uses the .NET Framework already built into Windows 10 and 11.
+**Do not run a flagged EXE just to uninstall its startup task.**
 
-## How to use
+1. Open Windows **Task Scheduler**, then **Task Scheduler Library**.
+2. Inspect tasks named `PickAds`, `MC Ad Blocker`, or `PickAds-Reviewed-S-1-5-...`.
+   Check their Actions point to your old PickAds copy before disabling them.
+3. In Windows **Settings > Apps > Startup**, disable older PickAds entries too.
+4. Exit old running PickAds instances before opening this preview.
 
-1. Download and extract the build ZIP using the instructions above.
-2. Open it and click **Yes** when Windows asks for permission. PickAds needs admin rights to edit the Windows hosts file.
-3. Click **Turn on blocking** to edit the hosts file. Enable **Auto-block new ads** only if you want background DNS-cache inspection. Both are off by default for new settings.
+This new EXE cannot remove tasks already installed by an older version. Existing
+hosts blocks remain until explicitly removed. Installing this file alone does
+not clean or certify your PC.
 
-If ads still show, fully close the launcher (check the tray near the clock) and open it again.
+## Download, open and use
 
-Keep antivirus protection enabled. Do not bypass a malware detection or restore the previously quarantined executable on the strength of this source review.
+Use the successful **Build PickAds Safer Preview** GitHub Actions run on the
+`pickads-windows-safer` branch. Download **PickAds-Windows-Safer-Preview** under
+Artifacts, extract it and scan the new EXE using current Windows protection.
+Do not bypass a detection or add an exclusion.
 
-## How it works
+1. Open `PickAds.exe` normally. The title says **PickAds Safer Preview**.
+2. Review **Domain list**. The initial list contains 61 domains from the uploaded
+   build plus any valid domains found in the existing marked hosts section.
+3. Click **Turn on blocking** and approve Windows' permission prompt if wanted.
+4. Fully close and reopen the Minecraft launcher.
+5. Use **Scan now** or optional **Find new ads** to propose additional domains.
+6. Review the list, then click **Apply new blocks** to approve system changes.
+   Add/Unblock changes also need Apply while blocking is on.
+7. **Recent lookups** shows computer-wide DNS names without preselecting anything.
+   Its Copy all action warns about potentially private DNS names before copying.
+8. Click **Turn off blocking** and approve the removal to undo the marked section.
 
-PickAds adds ad-server domains to the Windows **hosts file** (`C:\Windows\System32\drivers\etc\hosts`), pointing them to `0.0.0.0` so your PC can't connect to them. It's the same idea as Pi-hole or a browser ad blocker.
+Closing the window hides it in the tray. Right-click the tray icon to reopen or
+exit. Exiting leaves existing system blocks in place. Domain blocking affects all
+apps using Windows' resolver and cannot guarantee that every ad is blocked.
 
-- When automatic detection is enabled, every 15 seconds it checks the Windows DNS cache for recently visited domains and blocks any that match known ad networks.
-- It **never modifies any launcher's files or the game**. It only blocks connections to ad servers.
-- Its entries in the hosts file sit between `# >>> PickAds START` and `# <<< PickAds END`. Turning blocking off removes them and leaves the rest of your hosts file untouched.
-- It doesn't collect or send any data. It never connects to the internet itself.
+**Start with Windows** opens only the unprivileged interface. It needs a stable
+EXE location; moving the file breaks that entry. Applying system changes still
+needs approval. No passwords are saved and Windows protection stays enabled.
 
-Settings and lists are stored in `C:\ProgramData\PickAds\`.
+## Validation and remaining limits
 
-### Antivirus warnings
+The source and tests compile with Microsoft .NET SDK 8.0.419 targeting .NET
+Framework 4.8. Managed security and layout checks run locally under Mono/Xvfb.
+The Windows workflow additionally exercises hard-link refusal. Live UAC, pipe
+permissions, alternate administrator credentials, antivirus results and Windows
+startup still require native desktop validation. The preview remains unsigned.
+See the review for exact completed checks. No zero-detection or malware-free claim.
 
-Some antivirus programs flag new, unsigned apps that edit the hosts file and start with Windows, because malware sometimes does those things too. A detection must be investigated; this source review cannot establish that an existing executable is safe or matches this source.
+## Build
 
-## Uninstall
+On Windows with the .NET SDK:
 
-1. Open PickAds and click **Turn off blocking**, remove any legacy PickAds scheduled task through Windows Task Scheduler after inspecting it. This version does not create or modify startup tasks.
-2. Right-click the tray icon and choose **Exit**.
-3. Delete `PickAds.exe` and the folder `C:\ProgramData\PickAds`.
-
-## Build it yourself
-
-**Easiest (no installs):** on Windows, double-click `build.bat`. The app appears in `dist\PickAds.exe`.
-
-**With the .NET SDK:**
-
-```
+```text
 dotnet build PickAds.csproj -c Release -o dist
 ```
 
-## Forks
+`build.bat` also includes all three source files for the Windows Framework compiler.
+The GitHub workflow runs both test projects and preserves failure logs.
 
-Forks are welcome under the MIT License. Please **use a different name and icon** for your fork, so people don't confuse it with the official PickAds.
+## Independence and license
 
-## Disclaimer
+PickAds is not affiliated with, endorsed by, sponsored by, or officially connected
+to Dawn Client, Lunar Client, Modrinth App, Mojang, Microsoft or other Minecraft
+launchers/clients. Names and trademarks belong to their owners. Blocking ads may
+reduce revenue for developers and creators; consider their official support options.
 
-PickAds is an independent project. It is **not affiliated with, endorsed by, or connected to** Lunar Client (Moonsworth), Dawn Client, Modrinth, Mojang or Microsoft. All product names belong to their owners.
-
-Blocking ads means launchers and creators earn less from you. On Modrinth, part of the ad revenue goes to mod creators. If you'd like to support them, consider [Modrinth+](https://modrinth.com/plus).
-
-## License
-
-[MIT](LICENSE)
-
-## Optional startup
-
-Open PickAds, approve its administrator prompt, and turn on **Start with Windows**. Confirm the explanation. The app copies itself into a new protected `Program Files\PickAds-Startup-<random>` folder and registers a scheduled task for the current Windows identity, starting 15 seconds after sign-in with highest available privileges. This is intended for Windows administrator accounts; it does not grant administrator rights to standard accounts. Approving UAC as another account sets up startup for that account instead.
-
-Turn the switch off to remove the task and the older PickAdsReviewed Run entry. Protected installed files remain. To update the startup copy: turn startup off, exit PickAds, open the new EXE, and turn startup on again. Moving the downloaded EXE does not move the installed startup copy. Existing legacy tasks named PickAds or MC Ad Blocker are not changed. Antivirus protection remains enabled; do not bypass detections. Login behavior has not been tested on Windows in this environment.
-
-## Resize the window
-
-Drag a window edge or corner to resize PickAds, or use the title-bar maximize button.
-The domain list expands with the window; settings stay aligned and the bottom buttons
-share the available width. The original small size is the minimum to avoid clipping.
-
-When updating from an older startup copy: turn **Start with Windows** off, exit
-PickAds through the tray, open the new EXE, then enable startup again if wanted.
+Copyright (c) 2026 miniuid. [MIT License](LICENSE).
