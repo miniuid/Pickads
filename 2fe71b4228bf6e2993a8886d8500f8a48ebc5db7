@@ -1,0 +1,9 @@
+{
+  "tag": "pickads-windows-safer",
+  "source_commit": "2fe71b4228bf6e2993a8886d8500f8a48ebc5db7",
+  "build": "success",
+  "publish": "skipped",
+  "run_url": "https://github.com/miniuid/Pickads/actions/runs/44549131981",
+  "complete": false,
+  "diagnostics": {}
+}
